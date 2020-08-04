@@ -4,36 +4,60 @@
 #include <atomic>
 #include <thread>
 #include <functional>
+#include <deque>
 
 #include "semaphore.h"
-#include "stealing_queue.h"
+#include "stealing_stack.h"
 #include "pin.h"
+
+#define JOB_BUCKET_SIZE 1
 
 struct TriggerJob {
 	PinObserver*	context;
 	Pin*			pin;
 };
 
-class TriggerExecutor {
-public:
-	TriggerExecutor();
+struct JobBucket {
+	TriggerJob		jobs[JOB_BUCKET_SIZE];
+	uint8_t			num_jobs;
+};
 
+class SingleThreadExecutor {
+public:
 	void			add_job(PinObserver* ctx, Pin* pin);
 	bool 			do_job(void* thread_ctx);
 	void			run();
 
 private:
-	std::vector<StealingQueue<TriggerJob>*>	m_queues;
-	std::atomic<uint32_t>					m_next_queue;
-	std::thread**							m_threads;
-
-	Semaphore								m_wait_sem;
-	Semaphore								m_run_wait_sem;
-	std::atomic<uint64_t>					m_current;
-
-	uint64_t								m_num_added_not_running;
-	bool									m_paused;
+	std::deque<TriggerJob>					m_queue;
 };
-extern TriggerExecutor gExecutor;
+
+class MultiThreadExecutor {
+public:
+	MultiThreadExecutor();
+
+	void			add_job(PinObserver* ctx, Pin* pin);
+	bool 			do_job();
+	void			run();
+
+private:
+	uint32_t								m_num_threads;
+	std::thread**							m_threads;
+	StealingStack<JobBucket>*				m_queues;
+	JobBucket*								m_thread_buckets;
+
+	FastSemaphore							m_job_sem;
+	FastSemaphore							m_run_sem;
+
+	std::atomic<uint64_t>					m_jobs;
+	uint64_t								m_jobs_na;
+	std::atomic<bool>						m_running;
+
+	uint64_t								m_jobs_added;
+
+	bool									do_thread_job();
+};
+
+extern MultiThreadExecutor gExecutor;
 
 #endif // _EXECUTOR_H_

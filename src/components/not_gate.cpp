@@ -9,7 +9,7 @@ void NOTGate::on_trigger(Pin* o) {
 void NOTGate::set_input(Pin& a) {
 	in_a = &a;
 	a.register_observer(this);
-	gExecutor.add_job(this, in_a);
+	gExecutor.add_job({this, in_a});
 }
 
 Pin& NOTGate::get_out() {

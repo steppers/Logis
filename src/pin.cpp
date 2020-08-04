@@ -1,20 +1,18 @@
 #include "pin.h"
 
-#include "executor.h"
-
 Pin::Pin()
 :	m_state(0)
 ,	m_floating(true)
 {}
 
 void Pin::set_state(uint64_t s) {
-	m_state = s;
-	m_floating = false;
+	m_state.store(s, std::memory_order_relaxed);
+	// m_floating = false;
 	trigger_observers();
 }
 
 uint64_t Pin::get_state() const {
-	return m_state;
+	return m_state.load(std::memory_order_consume);
 }
 
 void Pin::set_floating(bool enable) {
@@ -23,12 +21,12 @@ void Pin::set_floating(bool enable) {
 }
 
 void Pin::register_observer(PinObserver* o) {
-	m_observers.push_back(o);
+	m_observers.push_back({o, this});
 } 
 
 void Pin::trigger_observers() {
 	for(auto o : m_observers) {
-		gExecutor.add_job(o, this);
+		gExecutor.add_job(o);
 	}
 }
 

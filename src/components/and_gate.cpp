@@ -11,7 +11,7 @@ void ANDGate::set_inputs(Pin& a, Pin& b) {
 	in_b = &b;
 	a.register_observer(this);
 	b.register_observer(this);
-	gExecutor.add_job(this, in_a);
+	gExecutor.add_job({this, in_a});
 }
 
 Pin& ANDGate::get_out() {

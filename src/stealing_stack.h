@@ -57,6 +57,7 @@ bool StealingStack<T>::pop(T& val) {
 	}
 
 	val = f->val;
+	delete f;
 	
 	return true;
 }

@@ -1,13 +1,15 @@
 #include "executor.h"
 
+#include "pin.h"
+
 MultiThreadExecutor gExecutor;
 
 //////////////////////////////////////////////////////////////////////////////////
 // Single threaded
 //////////////////////////////////////////////////////////////////////////////////
 
-void SingleThreadExecutor::add_job(PinObserver* ctx, Pin* pin) {
-	m_queue.push_back({ctx, pin});
+void SingleThreadExecutor::add_job(TriggerJob job) {
+	m_queue.push_back(job);
 }
 
 void SingleThreadExecutor::run() {
@@ -50,16 +52,13 @@ MultiThreadExecutor::MultiThreadExecutor()
 	}
 }
 
-void MultiThreadExecutor::add_job(PinObserver* ctx, Pin* pin) {
+void MultiThreadExecutor::add_job(TriggerJob job) {
 	// Add job to thread bucket
-	const uint8_t thread_jobs = thread_bucket.num_jobs++;
-	thread_bucket.jobs[thread_jobs] = { ctx, pin };
-
-	m_jobs.fetch_add(1, std::memory_order_relaxed);
-	// ++m_jobs_na;
+	thread_bucket.jobs[thread_bucket.num_jobs++] = job;
 
 	// If the bucket is full, add it to the shared list
 	if(thread_bucket.num_jobs == JOB_BUCKET_SIZE) {
+		m_jobs.fetch_add(1, std::memory_order_relaxed);
 		m_queues[thread_id].push(thread_bucket);
 		thread_bucket.num_jobs = 0;
 
@@ -76,26 +75,22 @@ bool MultiThreadExecutor::do_job() {
 
 	JobBucket bucket;
 
-	if(do_thread_job())
+	if(do_thread_jobs())
 		return true;
 
 	m_job_sem.Wait();
 
-	if(do_thread_job())
+	if(do_thread_jobs())
 		return true;
 
 	while (true) {
 		for (size_t i = 0; i < num_queues; i++) {
 			if (m_queues[(thread_id + i) % num_queues].pop(bucket)) {
 				for(uint8_t i = 0; i < bucket.num_jobs; ++i) {
-					bucket.jobs[i].context->on_trigger_lock(bucket.jobs[i].pin);
+					bucket.jobs[i].context->on_trigger(bucket.jobs[i].pin);
 				}
 
-				// Signal to the run() function if all jobs are completed
-				if(m_jobs.fetch_sub(bucket.num_jobs) == bucket.num_jobs)
-				{
-					m_run_sem.Signal();
-				}
+				m_jobs.fetch_sub(1, std::memory_order_relaxed);
 				return true;
 			}
 		}
@@ -104,17 +99,15 @@ bool MultiThreadExecutor::do_job() {
 	return false;
 }
 
-bool MultiThreadExecutor::do_thread_job() {
+bool MultiThreadExecutor::do_thread_jobs() {
 	if(thread_bucket.num_jobs > 0) {
-		TriggerJob job = thread_bucket.jobs[thread_bucket.num_jobs - 1];
-		--thread_bucket.num_jobs;
-		job.context->on_trigger_lock(job.pin);
+		JobBucket bucket = thread_bucket;
+		thread_bucket.num_jobs = 0;
 
-		if(m_jobs.fetch_sub(1) == 1)
-		{
-			m_run_sem.Signal();
+		for(uint8_t i = 0; i < bucket.num_jobs; ++i) {
+			TriggerJob job = bucket.jobs[i];
+			job.context->on_trigger(job.pin);
 		}
-
 		return true;
 	}
 
@@ -122,10 +115,6 @@ bool MultiThreadExecutor::do_thread_job() {
 }
 
 void MultiThreadExecutor::run() {
-	if (thread_bucket.num_jobs == 0 && m_jobs_added == 0) {
-		return;	
-	}
-
 	m_running = true;
 
 	// Signal for all added buckets
@@ -135,9 +124,7 @@ void MultiThreadExecutor::run() {
 	m_jobs_added = 0;
 
 	// Do jobs in the main thread's bucket
-	while(do_thread_job()) {}
-
-	m_run_sem.Wait();
+	while(do_thread_jobs() || m_jobs.load(std::memory_order_relaxed)) {}
 
 	m_running = false;
 }

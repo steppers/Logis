@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <vector>
 #include <mutex>
+#include <atomic>
+#include "executor.h"
 
 class Pin;
 
@@ -18,11 +20,11 @@ private:
 
 class Pin {
 protected:
-	uint64_t				  m_state;
+	std::atomic_uint64_t	  m_state;
 	bool					  m_floating;
 
 private:
-	std::vector<PinObserver*> m_observers;
+	std::vector<TriggerJob>	m_observers;
 
 public:
 	Pin();

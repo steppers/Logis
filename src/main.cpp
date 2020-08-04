@@ -24,12 +24,11 @@ int main()
 
 	PRINT_PIN(add.get_out());
 
-	for(uint32_t i = 0; i < 100000; ++i) {
+	for(uint32_t i = 0; i < 10000000; ++i) {
 		clk.cycle();
 		gExecutor.run();
 		clk.cycle();
 		gExecutor.run();
-		// PRINT_PIN(add.get_out());
 	}
 
 	PRINT_PIN(add.get_out()); 

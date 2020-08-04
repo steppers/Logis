@@ -44,6 +44,8 @@ MultiThreadExecutor::MultiThreadExecutor()
 ,	m_running(false)
 {
 	thread_id = 0;
+	thread_bucket.num_jobs = 0;
+
 	m_threads = new std::thread*[m_num_threads];
 	m_queues = new StealingStack<JobBucket>[m_num_threads + 1];
 
@@ -105,7 +107,7 @@ bool MultiThreadExecutor::do_thread_jobs() {
 		thread_bucket.num_jobs = 0;
 
 		for(uint8_t i = 0; i < bucket.num_jobs; ++i) {
-			TriggerJob job = bucket.jobs[i];
+			TriggerJob& job = bucket.jobs[i];
 			job.context->on_trigger(job.pin);
 		}
 		return true;

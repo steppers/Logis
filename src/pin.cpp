@@ -12,7 +12,7 @@ void Pin::set_state(uint64_t s) {
 }
 
 uint64_t Pin::get_state() const {
-	return m_state.load(std::memory_order_consume);
+	return m_state.load(std::memory_order_relaxed);
 }
 
 void Pin::set_floating(bool enable) {

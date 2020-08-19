@@ -56,6 +56,10 @@ MultiThreadExecutor::MultiThreadExecutor()
 
 void MultiThreadExecutor::add_job(TriggerJob job) {
 	// Add job to thread bucket
+	if (thread_bucket.num_jobs == 0) {
+		// If first job in thread bucket, increment job counter
+		m_jobs.fetch_add(1, std::memory_order_relaxed);
+	}
 	thread_bucket.jobs[thread_bucket.num_jobs++] = job;
 
 	// If the bucket is full, add it to the shared list
@@ -89,7 +93,7 @@ bool MultiThreadExecutor::do_job() {
 		for (size_t i = 0; i < num_queues; i++) {
 			if (m_queues[(thread_id + i) % num_queues].pop(bucket)) {
 				for(uint8_t i = 0; i < bucket.num_jobs; ++i) {
-					bucket.jobs[i].context->on_trigger(bucket.jobs[i].pin);
+					bucket.jobs[i].context->on_trigger_lock(bucket.jobs[i].pin);
 				}
 
 				m_jobs.fetch_sub(1, std::memory_order_relaxed);
@@ -108,8 +112,11 @@ bool MultiThreadExecutor::do_thread_jobs() {
 
 		for(uint8_t i = 0; i < bucket.num_jobs; ++i) {
 			TriggerJob& job = bucket.jobs[i];
-			job.context->on_trigger(job.pin);
+			job.context->on_trigger_lock(job.pin);
 		}
+
+		// The thread bucket counts as a single job
+		m_jobs.fetch_sub(1, std::memory_order_relaxed);
 		return true;
 	}
 

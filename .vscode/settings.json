@@ -6,7 +6,8 @@
 		"thread": "cpp",
 		"condition_variable": "cpp",
 		"memory": "cpp",
-		"algorithm": "cpp"
+		"algorithm": "cpp",
+		"vector": "cpp"
 	},
 	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

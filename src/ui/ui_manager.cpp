@@ -21,8 +21,9 @@ void UIManager::on_window_resize() {
 }
 
 void UIManager::handle_event(S2D_Event e) {
-    for (auto elem : m_elements) {
-        if (elem->handle_event(e))
+    // Events handled front to back
+    for(auto it = m_elements.rbegin() ;it != m_elements.rend(); ++it) {
+        if ((*it)->handle_event(e))
             break;
     }
 }

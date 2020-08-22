@@ -24,24 +24,12 @@ void on_event(S2D_Event e) {
 
 void init_ui() {
 	UIMenuBar* menu_bar = new UIMenuBar(); 
-	menu_bar->enable(true);
+	menu_bar->managed(true);
 
 	UIRect* panel = new UIRect(0.2f, 0.2f, 0.2f, 1.0f);
     panel->set_rect(Rect(0, 0, 200, 50));
     panel->set_fill(FILL_HEIGHT);
-    panel->enable(true);
-
-    UIRect* button = new UIRect(0.7f, 0.2f, 0.2f, 1.0f);
-    button->set_rect(Rect(0, 0, 180, 30));
-	button->set_anchor(ALIGN_C);
-	button->set_alignment(ALIGN_C);
-    panel->add_child(button);
-
-	UILabel* label = new UILabel("Hello");
-	label->set_rect(Rect(0, 0, 180, 30));
-	label->set_text_align(ALIGN_C);
-	label->set_text_size(20);
-    button->add_child(label);
+    panel->managed(true);
 }
 
 // #define PRINT_PIN(pin) \

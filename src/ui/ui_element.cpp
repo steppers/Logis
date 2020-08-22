@@ -4,7 +4,7 @@
 Vec2 gWindowSize(0, 0);
 
 UIElement::UIElement()
-:   m_enabled(false)
+:   m_managed(false)
 ,   m_priority(0)
 ,   m_rect(0, 0, 50, 50)
 ,   m_render_rect(0, 0, 50, 50)
@@ -34,17 +34,17 @@ bool UIElement::handle_event(S2D_Event e) {
     return false;
 }
 
-void UIElement::enable(bool enabled) {
-    if(enabled && !m_enabled) {
+void UIElement::managed(bool managed) {
+    if(managed && !m_managed) {
         UIManager::get().add_element(this);
-    } else if(!enabled && m_enabled) {
+    } else if(!managed && m_managed) {
         UIManager::get().remove_element(this);
     }
 }
 
 void UIElement::set_priority(uint16_t priority) {
     m_priority = priority;
-    if(m_enabled) {
+    if(m_managed) {
         UIManager::get().adjust_priorities();
     }
 }
@@ -64,7 +64,7 @@ void UIElement::set_anchor(UIAlignment anchor) {
     update_render_rect();
 }
 
-void UIElement::set_fill(UIFill fill) {
+void UIElement::set_fill(uint8_t fill) {
     m_fill = fill;
     update_render_rect();
 }
@@ -145,7 +145,7 @@ UILabel::UILabel(const char* text)
 :   m_text_obj(nullptr)
 ,   m_text(text)
 {
-    m_text_obj = S2D_CreateText("assets/JetBrainsMono-Regular.ttf", m_text, 14);
+    m_text_obj = S2D_CreateText("assets/fonts/JetBrainsMono-Regular.ttf", m_text, 14);
     set_text_align(ALIGN_C);
 }
 
@@ -174,12 +174,18 @@ void UILabel::set_text_align(UIAlignment align) {
             break;
         case ALIGN_TC: break;
         case ALIGN_TR: break;
-        case ALIGN_CL: break;
+        case ALIGN_CL:
+            m_x_offset = 0;
+            m_y_offset = (m_render_rect.height() - m_text_obj->height) / 2;
+            break;
         case ALIGN_C:
             m_x_offset = (m_render_rect.width() - m_text_obj->width) / 2;
             m_y_offset = (m_render_rect.height() - m_text_obj->height) / 2;
             break;
-        case ALIGN_CR: break;
+        case ALIGN_CR:
+            m_x_offset = (m_render_rect.width() - m_text_obj->width);
+            m_y_offset = (m_render_rect.height() - m_text_obj->height) / 2;
+            break;
         case ALIGN_BL: break;
         case ALIGN_BC: break;
         case ALIGN_BR:
@@ -191,12 +197,127 @@ void UILabel::set_text_align(UIAlignment align) {
 
 void UILabel::set_text_size(int size) {
     S2D_FreeText(m_text_obj);
-    m_text_obj = S2D_CreateText("assets/JetBrainsMono-Regular.ttf", m_text, size);
+    m_text_obj = S2D_CreateText("assets/fonts/JetBrainsMono-Regular.ttf", m_text, size);
     set_text_align(m_text_align);
 }
 
+UISprite::UISprite(const char* texture) {
+    m_texture = S2D_CreateImage(texture);
+}
+
+void UISprite::draw() {
+    const Rect& rc = m_render_rect;
+    m_texture->x = rc.xmin;
+    m_texture->y = rc.ymin;
+    m_texture->width = rc.width();
+    m_texture->height = rc.height();
+    S2D_DrawImage(m_texture);
+    UIElement::draw();
+}
+
+UIButton::UIButton(const char* text, const char* icon)
+:   m_label(nullptr)
+,   m_icon(nullptr)
+{
+    if (text != nullptr) {
+        m_label = new UILabel(text);
+        add_child(m_label);
+    }
+
+    if (icon != nullptr) {
+        m_icon = new UISprite(icon);
+        add_child(m_icon);
+    }
+
+    update_render_rect();
+
+    m_button_color = Color(0.1f, 0.1f, 0.1f, 1.0f);
+    m_hover_color = Color(0.92f * 0.7f, 0.63f * 0.7f, 0.20f * 0.7f, 1.0f);
+    m_pressed_color = Color(0.92f, 0.63f, 0.20f, 1.0f);
+}
+
+void UIButton::draw() {
+    const Rect& rc = m_render_rect;
+
+    Color c = m_button_color;
+    if(m_pressed) {
+        c = m_pressed_color;
+    } else if(m_mouse_over) {
+        c = m_hover_color;
+    }
+
+    S2D_DrawQuad(
+        rc.xmin, rc.ymin, COLOR2RGBA(c),
+        rc.xmin, rc.ymax, COLOR2RGBA(c),
+        rc.xmax, rc.ymax, COLOR2RGBA(c),
+        rc.xmax, rc.ymin, COLOR2RGBA(c)
+    );
+
+    UIElement::draw();
+}
+
+void UIButton::update_render_rect() {
+    UIElement::update_render_rect();
+    
+    const Rect& rc = m_render_rect;
+
+    if (m_icon != nullptr && m_label != nullptr) {
+        m_label->set_alignment(ALIGN_CL);
+        m_label->set_anchor(ALIGN_CL);
+        m_label->set_text_align(ALIGN_CL);
+        m_label->set_rect(Rect(2, 0, rc.width() - 4, rc.height() - 4));
+
+        m_icon->set_alignment(ALIGN_CR);
+        m_icon->set_anchor(ALIGN_CR);
+        m_icon->set_rect(Rect(-2, 0, rc.height() - 4, rc.height() - 4));
+
+    } else if (m_icon != nullptr && m_label == nullptr) {
+        m_icon->set_alignment(ALIGN_C);
+        m_icon->set_anchor(ALIGN_C);
+
+        float size = std::min(rc.height(), rc.width());
+        m_icon->set_rect(Rect(0, 0, size - 4, size - 4));
+
+    } else if (m_icon == nullptr && m_label != nullptr) {
+        m_label->set_alignment(ALIGN_C);
+        m_label->set_anchor(ALIGN_C);
+        m_label->set_text_align(ALIGN_C);
+        m_label->set_rect(Rect(0, 0, rc.width(), rc.height()));
+    }
+}
+
+bool UIButton::handle_event(S2D_Event e) {
+    if(UIElement::handle_event(e))
+        return true;
+
+    switch(e.type) {
+        case S2D_MOUSE_DOWN:
+            if (e.button == S2D_MOUSE_LEFT && m_mouse_over && !m_pressed) {
+                m_pressed = true;
+                return true;
+            }
+            break;
+        case S2D_MOUSE_UP:
+            if (e.button == S2D_MOUSE_LEFT && m_pressed) {
+                m_pressed = false;
+                // Trigger button click callback
+                return true;
+            }
+            break;
+        case S2D_MOUSE_MOVE:
+            m_mouse_over = m_render_rect.contains(e.x, e.y);
+            if (!m_mouse_over && m_pressed) {
+                m_pressed = false;
+                return true;
+            }
+            break;
+    }
+
+    return false;
+}
+
 UIRect::UIRect(float r, float g, float b, float a)
-:   r(r), g(g), b(b), a(a), is_pressed(false) {}
+:   r(r), g(g), b(b), a(a) {}
 
 void UIRect::draw() {
     const Rect& rc = m_render_rect;
@@ -207,41 +328,4 @@ void UIRect::draw() {
         rc.xmax, rc.ymin, r, g, b, a
     );
     UIElement::draw();
-}
-
-bool UIRect::handle_event(S2D_Event e) {
-    if(UIElement::handle_event(e))
-        return true;
-
-    switch(e.type) {
-        case S2D_MOUSE_DOWN:
-            if (e.button == S2D_MOUSE_LEFT && m_render_rect.contains(e.x, e.y) && !is_pressed) {
-                r *= 1.2f;
-                g *= 1.2f;
-                b *= 1.2f;
-                is_pressed = true;
-                return true;
-            }
-            break;
-        case S2D_MOUSE_UP:
-            if (e.button == S2D_MOUSE_LEFT && is_pressed) {
-                r /= 1.2f;
-                g /= 1.2f;
-                b /= 1.2f;
-                is_pressed = false;
-                return true;
-            }
-            break;
-        case S2D_MOUSE_MOVE:
-            if (!m_render_rect.contains(e.x, e.y) && is_pressed) {
-                r /= 1.2f;
-                g /= 1.2f;
-                b /= 1.2f;
-                is_pressed = false;
-                return true;
-            }
-            break;
-    }
-
-    return false;
 }

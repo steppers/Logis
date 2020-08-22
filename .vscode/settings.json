@@ -4,6 +4,9 @@
 		"*.screen": "json",
 		"deque": "cpp",
 		"thread": "cpp",
-		"condition_variable": "cpp"
-	}
+		"condition_variable": "cpp",
+		"memory": "cpp",
+		"algorithm": "cpp"
+	},
+	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }

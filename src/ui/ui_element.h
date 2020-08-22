@@ -2,7 +2,11 @@
 #define _UI_ELEMENT_H_
 
 #include <vector>
+#include <functional>
+
 #include <simple2d.h>
+
+typedef std::function<void(void)> Callback;
 
 enum UIAlignment {
     ALIGN_TL,
@@ -56,6 +60,20 @@ struct Rect {
         ymin += y; ymax += y;
     }
 
+    void move_center_to(float x, float y) {
+        const float w = width();
+        const float h = height();
+        xmin = x - w/2; xmax = xmin + w;
+        ymin = y - h/2; ymax = ymin + h;
+    }
+
+    void move_to(float x, float y) {
+        const float w = width();
+        const float h = height();
+        xmin = x; xmax = xmin + w;
+        ymin = y; ymax = ymin + h;
+    }
+
     bool contains(float x, float y) const {
         return x >= xmin && x <= xmax && y >= ymin && y <= ymax;
     }
@@ -76,6 +94,8 @@ public:
 
     Rect            get_rect() { return m_rect; }
     void            set_rect(Rect r);
+
+    void            move_to(float x, float y);
 
     UIAlignment     get_alignment() { return m_align; }
     void            set_alignment(UIAlignment align);
@@ -123,6 +143,8 @@ public:
     void set_text_align(UIAlignment align);
     void set_text_size(int size);
 
+    void set_text(const char* text);
+
 protected:
     void update_render_rect() override;
 
@@ -152,6 +174,8 @@ public:
     virtual void draw() override;
     virtual bool handle_event(S2D_Event e) override;
 
+    void bind_on_click(Callback cb);
+
     void set_color(Color c);
 
 protected:
@@ -167,6 +191,8 @@ private:
 
     UILabel*    m_label;
     UISprite*   m_icon;
+
+    Callback    m_callback;
 };
 
 class UIRect : public UIElement {

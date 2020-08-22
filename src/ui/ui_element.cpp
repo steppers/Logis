@@ -54,6 +54,11 @@ void UIElement::set_rect(Rect r) {
     update_render_rect();
 }
 
+void UIElement::move_to(float x, float y) {
+    m_rect.move_to(x, y);
+    update_render_rect();
+}
+
 void UIElement::set_alignment(UIAlignment align) {
     m_align = align;
     update_render_rect();
@@ -201,6 +206,11 @@ void UILabel::set_text_size(int size) {
     set_text_align(m_text_align);
 }
 
+void UILabel::set_text(const char* text) {
+    S2D_SetText(m_text_obj, text);
+    set_text_align(m_text_align);
+}
+
 UISprite::UISprite(const char* texture) {
     m_texture = S2D_CreateImage(texture);
 }
@@ -216,8 +226,11 @@ void UISprite::draw() {
 }
 
 UIButton::UIButton(const char* text, const char* icon)
-:   m_label(nullptr)
+:   m_pressed(false)
+,   m_mouse_over(false)
+,   m_label(nullptr)
 ,   m_icon(nullptr)
+,   m_callback(nullptr)
 {
     if (text != nullptr) {
         m_label = new UILabel(text);
@@ -300,6 +313,9 @@ bool UIButton::handle_event(S2D_Event e) {
         case S2D_MOUSE_UP:
             if (e.button == S2D_MOUSE_LEFT && m_pressed) {
                 m_pressed = false;
+                if (m_callback) {
+                    m_callback();
+                }
                 // Trigger button click callback
                 return true;
             }
@@ -314,6 +330,14 @@ bool UIButton::handle_event(S2D_Event e) {
     }
 
     return false;
+}
+
+void UIButton::bind_on_click(Callback cb) {
+    m_callback = cb;
+}
+
+void UIButton::set_color(Color c) {
+    m_button_color = c;
 }
 
 UIRect::UIRect(float r, float g, float b, float a)

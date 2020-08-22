@@ -21,11 +21,14 @@ public:
     void handle_event(S2D_Event e);
     void on_window_resize();
 
-private:
-    std::vector<UIElement*> m_elements;
+    void begin_drag(UIElement* dragged);
 
 private:
-    UIManager() {};
+    std::vector<UIElement*> m_elements;
+    UIElement* m_dragged;
+
+private:
+    UIManager();
 };
 
 #endif // _UI_MANAGER_H_

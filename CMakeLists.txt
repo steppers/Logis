@@ -5,11 +5,13 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(SRC_FILES
+	src/ui/ui_circuit.cpp
 	src/ui/ui_menu_bar.cpp
 	src/ui/ui_manager.cpp
 	src/ui/ui_element.cpp
 	src/ui/ui_workspace.cpp
 	src/ui/ui_tool_panel.cpp
+	src/circuit_builder.cpp
 	src/circuit.cpp
 	src/components/counter.cpp
 	src/components/buffer.cpp

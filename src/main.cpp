@@ -1,6 +1,9 @@
 #include "ui/ui_element.h"
 #include "ui/ui_manager.h"
 #include "ui/ui_menu_bar.h"
+#include "ui/ui_tool_panel.h"
+#include "ui/ui_workspace.h"
+#include "circuit.h"
 
 static S2D_Window* sWindow;
 
@@ -10,6 +13,10 @@ void ui_update() {
         gWindowSize.y = sWindow->height;
         UIManager::get().on_window_resize();
     }
+
+	if((sWindow->frames % 15) == 0) {
+		global_clock.cycle();
+	}
 
     UIManager::get().update();
 }
@@ -26,10 +33,11 @@ void init_ui() {
 	UIMenuBar* menu_bar = new UIMenuBar(); 
 	menu_bar->managed(true);
 
-	UIRect* panel = new UIRect(0.2f, 0.2f, 0.2f, 1.0f);
-    panel->set_rect(Rect(0, 0, 200, 50));
-    panel->set_fill(FILL_HEIGHT);
-    panel->managed(true);
+	UIToolPanel* tool_panel = new UIToolPanel(); 
+	tool_panel->managed(true);
+
+	UIWorkSpace* work_space = new UIWorkSpace(); 
+	work_space->managed(true);
 }
 
 // #define PRINT_PIN(pin) \

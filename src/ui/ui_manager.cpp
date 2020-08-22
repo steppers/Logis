@@ -2,6 +2,10 @@
 
 #include <algorithm>
 
+UIManager::UIManager()
+:   m_dragged(nullptr)
+{}
+
 void UIManager::update() {
     for (auto e : m_elements) {
         e->update();
@@ -21,6 +25,10 @@ void UIManager::on_window_resize() {
 }
 
 void UIManager::handle_event(S2D_Event e) {
+    // if (m_dragged) {
+        
+    // }
+
     // Events handled front to back
     for(auto it = m_elements.rbegin() ;it != m_elements.rend(); ++it) {
         if ((*it)->handle_event(e))
